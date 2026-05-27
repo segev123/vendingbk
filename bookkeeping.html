@@ -329,8 +329,19 @@ function loadGapi() {
 }
 
 function autoSignIn() {
-  const savedToken = sessionStorage.getItem('vbk_token');
-  if (savedToken) { accessToken = savedToken; setSynced(); loadFromDrive(); }
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: clientId, scope: SCOPES,
+    prompt: '',
+    callback: (resp) => {
+      if (resp.access_token) {
+        accessToken = resp.access_token;
+        setSynced();
+        loadFromDrive();
+      }
+    },
+    error_callback: () => {}
+  });
+  client.requestAccessToken({ prompt: '' });
 }
 
 function driveSignIn() {
@@ -339,7 +350,6 @@ function driveSignIn() {
     callback: (resp) => {
       if (resp.access_token) {
         accessToken = resp.access_token;
-        sessionStorage.setItem('vbk_token', accessToken);
         closeModal();
         setSyncing();
         loadFromDrive();
