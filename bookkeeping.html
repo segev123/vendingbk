@@ -329,9 +329,11 @@ function loadGapi() {
 }
 
 function autoSignIn() {
+  const hint = localStorage.getItem('vbk_email') || '';
   const client = google.accounts.oauth2.initTokenClient({
     client_id: clientId, scope: SCOPES,
     prompt: '',
+    login_hint: hint,
     callback: (resp) => {
       if (resp.access_token) {
         accessToken = resp.access_token;
@@ -350,6 +352,11 @@ function driveSignIn() {
     callback: (resp) => {
       if (resp.access_token) {
         accessToken = resp.access_token;
+        // שמור אימייל לre-auth שקט בעתיד
+        try {
+          const payload = JSON.parse(atob(resp.access_token.split('.')[1]));
+          if (payload.email) localStorage.setItem('vbk_email', payload.email);
+        } catch(e) {}
         closeModal();
         setSyncing();
         loadFromDrive();
