@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VendingBK">
+<title>VendingBK</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Heebo:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0a;
+  --surface: #141414;
+  --surface2: #1e1e1e;
+  --border: #2a2a2a;
+  --border2: #333;
+  --text: #f0f0f0;
+  --muted: #666;
+  --muted2: #888;
+  --green: #4ade80;
+  --green-dim: #166534;
+  --red: #f87171;
+  --red-dim: #7f1d1d;
+  --accent: #a78bfa;
+  --accent-dim: #3b1f7a;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'Heebo', sans-serif;
+  --radius: 8px;
+  --radius-lg: 12px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 15px; line-height: 1.5; overscroll-behavior: none; }
+input, select, button, textarea { font-family: var(--sans); font-size: 14px; }
+
+/* LAYOUT */
+.app { display: flex; flex-direction: column; height: 100dvh; max-width: 680px; margin: 0 auto; }
+.header { padding: 16px 20px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.header-title { font-family: var(--mono); font-size: 15px; letter-spacing: 0.05em; color: var(--text); }
+.header-title span { color: var(--accent); }
+.sync-btn { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--surface); color: var(--muted2); font-size: 12px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+.sync-btn:hover { border-color: var(--accent); color: var(--accent); }
+.sync-btn.synced { color: var(--green); border-color: var(--green-dim); }
+.sync-btn.syncing { color: var(--accent); border-color: var(--accent-dim); }
+.sync-icon { width: 14px; height: 14px; }
+.content { flex: 1; overflow-y: auto; padding: 0 0 80px; -webkit-overflow-scrolling: touch; }
+.nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 680px; background: var(--surface); border-top: 1px solid var(--border); display: flex; padding: 8px 0 max(8px, env(safe-area-inset-bottom)); z-index: 100; }
+.nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 10px; letter-spacing: 0.05em; transition: color 0.15s; }
+.nav-btn.active { color: var(--accent); }
+.nav-icon { width: 22px; height: 22px; }
+
+/* SECTIONS */
+.section { display: none; padding: 20px; }
+.section.active { display: block; }
+
+/* KPI GRID */
+.kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; }
+.kpi label { font-size: 11px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; display: block; margin-bottom: 6px; }
+.kpi .val { font-family: var(--mono); font-size: 20px; font-weight: 500; }
+.kpi .val.g { color: var(--green); }
+.kpi .val.r { color: var(--red); }
+.kpi .val.a { color: var(--accent); }
+
+/* CARDS */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 14px; overflow: hidden; }
+.card-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.card-title { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted2); }
+
+/* FORM */
+.form-grid { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.field-row { display: grid; gap: 10px; }
+.field-row.cols2 { grid-template-columns: 1fr 1fr; }
+.field-row.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; }
+input[type=text], input[type=number], input[type=date], select {
+  background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius);
+  color: var(--text); padding: 0 10px; height: 40px; width: 100%;
+  -webkit-appearance: none; appearance: none;
+}
+select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: left 10px center; padding-left: 28px; }
+input:focus, select:focus { outline: none; border-color: var(--accent); }
+input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.5); }
+.btn-primary { width: 100%; height: 44px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); font-size: 14px; font-weight: 500; cursor: pointer; transition: opacity 0.15s; }
+.btn-primary:active { opacity: 0.8; }
+.btn-sm { padding: 5px 10px; font-size: 12px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--surface2); color: var(--muted2); cursor: pointer; }
+.btn-sm:hover { color: var(--text); border-color: var(--muted); }
+.btn-danger { color: var(--red); border-color: var(--red-dim); }
+.btn-danger:hover { background: var(--red-dim); }
+
+/* TABLE */
+.entries-list { padding: 0; }
+.entry-row { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.entry-row:last-child { border-bottom: none; }
+.entry-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.entry-cat { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.entry-sub { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.entry-amount { font-family: var(--mono); font-size: 14px; font-weight: 500; text-align: left; white-space: nowrap; }
+.entry-amount.g { color: var(--green); }
+.entry-amount.r { color: var(--red); }
+.badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 99px; letter-spacing: 0.05em; }
+.badge.i { background: #14532d; color: var(--green); }
+.badge.e { background: var(--red-dim); color: var(--red); }
+
+/* FILTER */
+.filter-bar { padding: 12px 16px; display: flex; gap: 8px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.filter-bar select, .filter-bar input { height: 34px; font-size: 13px; flex-shrink: 0; }
+.filter-bar input { width: 120px; }
+
+/* P&L */
+.pl-row { display: flex; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 14px; }
+.pl-row:last-child { border-bottom: none; }
+.pl-row.indent { padding-right: 28px; color: var(--muted2); font-size: 13px; }
+.pl-row.section-header { background: var(--surface2); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 8px 16px; }
+.pl-row.total { font-weight: 500; background: var(--surface2); }
+.pl-row.profit { font-size: 16px; font-weight: 600; padding: 14px 16px; }
+.pl-val { font-family: var(--mono); }
+
+/* MACHINE CARDS */
+.machine-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 10px; display: grid; grid-template-columns: 1fr auto auto auto; gap: 12px; align-items: center; }
+.machine-name { font-weight: 500; font-size: 14px; }
+.machine-stat { font-family: var(--mono); font-size: 12px; text-align: right; }
+
+/* EMPTY */
+.empty { padding: 32px; text-align: center; color: var(--muted); font-size: 13px; }
+
+/* SETUP MODAL */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: flex; align-items: flex-end; }
+.modal { background: var(--surface); border-radius: var(--radius-lg) var(--radius-lg) 0 0; border-top: 1px solid var(--border2); padding: 24px 20px max(24px, env(safe-area-inset-bottom)); width: 100%; max-width: 680px; margin: 0 auto; }
+.modal h3 { font-size: 16px; font-weight: 500; margin-bottom: 6px; }
+.modal p { font-size: 13px; color: var(--muted2); line-height: 1.7; margin-bottom: 14px; }
+.modal p a { color: var(--accent); }
+.modal .field { margin-bottom: 12px; }
+.modal .btn-primary { margin-top: 6px; }
+.modal .skip-btn { width: 100%; height: 38px; background: none; border: 1px solid var(--border2); border-radius: var(--radius); color: var(--muted); font-size: 13px; cursor: pointer; margin-top: 8px; }
+.step-indicator { display: flex; gap: 6px; margin-bottom: 18px; }
+.step-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border2); transition: background 0.2s; }
+.step-dot.active { background: var(--accent); }
+.code-block { background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius); padding: 10px 14px; font-family: var(--mono); font-size: 12px; color: var(--accent); word-break: break-all; margin: 8px 0; }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <div class="header-title">Vending<span>BK</span></div>
+    <button class="sync-btn" id="syncBtn" onclick="handleSync()">
+      <svg class="sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/>
+      </svg>
+      <span id="syncLabel">התחבר ל-Drive</span>
+    </button>
+  </div>
+
+  <div class="content">
+    <!-- DASHBOARD -->
+    <div class="section active" id="sec-dash">
+      <div class="kpi-grid" id="kpiGrid"></div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">עסקאות אחרונות</span></div>
+        <div class="entries-list" id="recentList"></div>
+      </div>
+    </div>
+
+    <!-- ADD ENTRY -->
+    <div class="section" id="sec-add">
+      <div class="card">
+        <div class="card-header"><span class="card-title">עסקה חדשה</span></div>
+        <div class="form-grid">
+          <div class="field-row cols2">
+            <div class="field"><label>תאריך</label><input type="date" id="e-date"></div>
+            <div class="field"><label>מכונה</label><select id="e-machine"></select></div>
+          </div>
+          <div class="field-row cols2">
+            <div class="field"><label>סוג</label>
+              <select id="e-type" onchange="updateCats()">
+                <option value="income">הכנסה</option>
+                <option value="expense">הוצאה</option>
+              </select>
+            </div>
+            <div class="field"><label>קטגוריה</label><select id="e-cat"></select></div>
+          </div>
+          <div class="field-row cols2">
+            <div class="field"><label>סכום (₪)</label><input type="number" id="e-amount" placeholder="0.00" min="0" step="0.01" inputmode="decimal"></div>
+            <div class="field"><label>תיאור (אופציונלי)</label><input type="text" id="e-desc" placeholder="הערה..."></div>
+          </div>
+          <button class="btn-primary" onclick="addEntry()">+ הוסף עסקה</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ENTRIES -->
+    <div class="section" id="sec-entries">
+      <div class="card" style="margin-bottom:14px">
+        <div class="filter-bar">
+          <select id="f-machine" onchange="renderEntries()"><option value="">כל המכונות</option></select>
+          <select id="f-type" onchange="renderEntries()">
+            <option value="">הכל</option>
+            <option value="income">הכנסות</option>
+            <option value="expense">הוצאות</option>
+          </select>
+          <input type="text" id="f-search" placeholder="חיפוש..." oninput="renderEntries()">
+        </div>
+        <div class="entries-list" id="entriesList"></div>
+      </div>
+      <button class="btn-sm" onclick="exportCSV()" style="width:100%;height:40px">ייצא CSV</button>
+    </div>
+
+    <!-- P&L -->
+    <div class="section" id="sec-pl">
+      <div class="card" style="margin-bottom:14px">
+        <div class="filter-bar">
+          <select id="pl-machine" onchange="renderPL()"><option value="">כל המכונות</option></select>
+          <select id="pl-month" onchange="renderPL()"><option value="">כל החודשים</option></select>
+        </div>
+        <div id="plContent"></div>
+      </div>
+    </div>
+
+    <!-- MACHINES -->
+    <div class="section" id="sec-machines">
+      <div class="card" style="margin-bottom:14px">
+        <div class="form-grid">
+          <div class="field-row" style="grid-template-columns:1fr auto">
+            <div class="field"><label>שם המכונה</label><input type="text" id="m-name" placeholder="מכונה 1 — תל אביב מרכז"></div>
+            <div class="field" style="justify-content:flex-end"><label>&nbsp;</label><button class="btn-primary" style="width:80px;height:40px" onclick="addMachine()">הוסף</button></div>
+          </div>
+        </div>
+      </div>
+      <div id="machinesList"></div>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <button class="nav-btn active" onclick="showTab('dash')" id="nav-dash">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      דשבורד
+    </button>
+    <button class="nav-btn" onclick="showTab('add')" id="nav-add">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      הוסף
+    </button>
+    <button class="nav-btn" onclick="showTab('entries')" id="nav-entries">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      עסקאות
+    </button>
+    <button class="nav-btn" onclick="showTab('pl')" id="nav-pl">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      P&L
+    </button>
+    <button class="nav-btn" onclick="showTab('machines')" id="nav-machines">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      מכונות
+    </button>
+  </nav>
+</div>
+
+<!-- DRIVE SETUP MODAL -->
+<div class="modal-overlay hidden" id="driveModal">
+  <div class="modal">
+    <div class="step-indicator">
+      <div class="step-dot active" id="dot0"></div>
+      <div class="step-dot" id="dot1"></div>
+      <div class="step-dot" id="dot2"></div>
+    </div>
+    <div id="modalStep0">
+      <h3>חיבור ל-Google Drive</h3>
+      <p>הנתונים שלך יישמרו בקובץ <strong>vendingbk.json</strong> ב-Drive שלך. גישה מהמחשב ומהטלפון, ללא שרת.</p>
+      <p>צריך ליצור פרויקט Google ב-<a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a> — לוקח כ-5 דקות.</p>
+      <button class="btn-primary" onclick="goStep(1)">בואו נתחיל ←</button>
+      <button class="skip-btn" onclick="skipDrive()">המשך ללא סנכרון</button>
+    </div>
+    <div id="modalStep1" class="hidden">
+      <h3>שלב 1 — Client ID</h3>
+      <p>1. כנס ל-<a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a><br>
+      2. צור פרויקט חדש (כל שם)<br>
+      3. APIs &amp; Services → Enable APIs → חפש "Google Drive API" → Enable<br>
+      4. Credentials → Create Credentials → OAuth 2.0 Client ID<br>
+      5. Application type: <strong>Web application</strong><br>
+      6. Authorized JS origins: הוסף <code>null</code> (לקובץ מקומי)<br>
+      7. העתק את ה-Client ID לכאן:</p>
+      <div class="field"><label>Client ID</label><input type="text" id="clientIdInput" placeholder="xxxx.apps.googleusercontent.com"></div>
+      <button class="btn-primary" onclick="saveClientId()">שמור והמשך ←</button>
+      <button class="skip-btn" onclick="goStep(0)">← חזור</button>
+    </div>
+    <div id="modalStep2" class="hidden">
+      <h3>שלב 2 — התחבר</h3>
+      <p>לחץ על הכפתור לאישור גישה ל-Drive שלך. האפליקציה תיצור קובץ <code>vendingbk.json</code> בתיקיית הבסיס.</p>
+      <button class="btn-primary" onclick="driveSignIn()">התחבר עם Google ←</button>
+      <button class="skip-btn" onclick="goStep(1)">← חזור</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const INCOME_CATS = ['מכירות מזון','מכירות משקאות','מכירות שונות'];
+const EXPENSE_CATS = ['דלק/נסיעות','תחזוקה ותיקונים','עמלות כרטיס אשראי','מלאי/רכש','שכירות מיקום','פחת מכונה','ביטוח','חשמל','אחר'];
+const FILE_NAME = 'vendingbk.json';
+const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+
+let db = JSON.parse(localStorage.getItem('vbk_data') || '{"machines":["מכונה 1"],"entries":[]}');
+let driveFileId = localStorage.getItem('vbk_file_id') || null;
+let clientId = localStorage.getItem('vbk_client_id') || null;
+let accessToken = null;
+let gapiReady = false;
+
+function save() {
+  localStorage.setItem('vbk_data', JSON.stringify(db));
+  if (accessToken) scheduleDriveSync();
+}
+
+let syncTimer = null;
+function scheduleDriveSync() {
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncToDrive, 2000);
+}
+
+// ---- DRIVE ----
+function loadGapi() {
+  if (!clientId) return;
+  const s = document.createElement('script');
+  s.src = 'https://accounts.google.com/gsi/client';
+  s.onload = () => { gapiReady = true; autoSignIn(); };
+  document.head.appendChild(s);
+}
+
+function autoSignIn() {
+  const savedToken = sessionStorage.getItem('vbk_token');
+  if (savedToken) { accessToken = savedToken; setSynced(); loadFromDrive(); }
+}
+
+function driveSignIn() {
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: clientId, scope: SCOPES,
+    callback: (resp) => {
+      if (resp.access_token) {
+        accessToken = resp.access_token;
+        sessionStorage.setItem('vbk_token', accessToken);
+        closeModal();
+        setSyncing();
+        loadFromDrive();
+      }
+    }
+  });
+  client.requestAccessToken();
+}
+
+async function loadFromDrive() {
+  setSyncing();
+  try {
+    if (!driveFileId) {
+      const r = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${FILE_NAME}'&spaces=drive`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      const data = await r.json();
+      if (data.files && data.files.length > 0) {
+        driveFileId = data.files[0].id;
+        localStorage.setItem('vbk_file_id', driveFileId);
+        const content = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        db = await content.json();
+        localStorage.setItem('vbk_data', JSON.stringify(db));
+      } else {
+        await createDriveFile();
+      }
+    } else {
+      const r = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (r.ok) { db = await r.json(); localStorage.setItem('vbk_data', JSON.stringify(db)); }
+    }
+    setSynced();
+    renderAll();
+  } catch(e) { setError(); }
+}
+
+async function createDriveFile() {
+  const meta = new Blob([JSON.stringify({name: FILE_NAME, mimeType: 'application/json'})], {type:'application/json'});
+  const content = new Blob([JSON.stringify(db)], {type:'application/json'});
+  const form = new FormData();
+  form.append('metadata', meta);
+  form.append('file', content);
+  const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+    method: 'POST', headers: { Authorization: `Bearer ${accessToken}` }, body: form
+  });
+  const data = await r.json();
+  driveFileId = data.id;
+  localStorage.setItem('vbk_file_id', driveFileId);
+}
+
+async function syncToDrive() {
+  if (!accessToken || !driveFileId) return;
+  setSyncing();
+  try {
+    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(db)
+    });
+    setSynced();
+  } catch(e) { setError(); }
+}
+
+function setSynced() { const b=document.getElementById('syncBtn'); b.className='sync-btn synced'; document.getElementById('syncLabel').textContent='מסונכרן'; }
+function setSyncing() { const b=document.getElementById('syncBtn'); b.className='sync-btn syncing'; document.getElementById('syncLabel').textContent='מסנכרן...'; }
+function setError() { const b=document.getElementById('syncBtn'); b.className='sync-btn'; document.getElementById('syncLabel').textContent='שגיאת סנכרון'; }
+
+function handleSync() {
+  if (accessToken) { loadFromDrive(); return; }
+  openModal();
+}
+
+// ---- MODAL ----
+function openModal() { document.getElementById('driveModal').classList.remove('hidden'); goStep(clientId ? 2 : 0); }
+function closeModal() { document.getElementById('driveModal').classList.add('hidden'); }
+function skipDrive() { closeModal(); }
+function goStep(n) {
+  [0,1,2].forEach(i => {
+    document.getElementById('modalStep'+i).classList.toggle('hidden', i!==n);
+    document.getElementById('dot'+i).classList.toggle('active', i===n);
+  });
+}
+function saveClientId() {
+  const val = document.getElementById('clientIdInput').value.trim();
+  if (!val.includes('apps.googleusercontent.com')) { alert('Client ID לא תקין'); return; }
+  clientId = val; localStorage.setItem('vbk_client_id', clientId);
+  loadGapi(); goStep(2);
+}
+
+// ---- DATA ----
+function fmt(n) { return '₪' + Math.abs(parseFloat(n)).toLocaleString('he-IL', {minimumFractionDigits:2,maximumFractionDigits:2}); }
+function today() { return new Date().toISOString().split('T')[0]; }
+
+function populateSelects() {
+  ['e-machine','f-machine','pl-machine'].forEach(id => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    const v = el.value;
+    const withAll = id !== 'e-machine';
+    el.innerHTML = (withAll ? '<option value="">כל המכונות</option>' : '') + db.machines.map(m=>`<option value="${m}">${m}</option>`).join('');
+    if(v) el.value = v;
+  });
+}
+
+function updateCats() {
+  const t = document.getElementById('e-type').value;
+  document.getElementById('e-cat').innerHTML = (t==='income'?INCOME_CATS:EXPENSE_CATS).map(c=>`<option>${c}</option>`).join('');
+}
+
+function addEntry() {
+  const date = document.getElementById('e-date').value;
+  const machine = document.getElementById('e-machine').value;
+  const type = document.getElementById('e-type').value;
+  const cat = document.getElementById('e-cat').value;
+  const amount = parseFloat(document.getElementById('e-amount').value);
+  const desc = document.getElementById('e-desc').value.trim();
+  if(!date||!machine||!amount||amount<=0) { alert('נא למלא תאריך, מכונה וסכום'); return; }
+  db.entries.unshift({id:Date.now(),date,machine,type,cat,amount,desc});
+  save();
+  document.getElementById('e-amount').value='';
+  document.getElementById('e-desc').value='';
+  showTab('dash');
+}
+
+function deleteEntry(id) {
+  if(!confirm('למחוק עסקה זו?')) return;
+  db.entries = db.entries.filter(e=>e.id!==id);
+  save(); renderAll();
+}
+
+function addMachine() {
+  const name = document.getElementById('m-name').value.trim();
+  if(!name||db.machines.includes(name)) { alert('שם לא תקין או כבר קיים'); return; }
+  db.machines.push(name); save();
+  document.getElementById('m-name').value='';
+  renderMachines(); populateSelects();
+}
+
+function deleteMachine(name) {
+  if(!confirm(`למחוק "${name}"?`)) return;
+  db.machines = db.machines.filter(m=>m!==name);
+  save(); renderMachines(); populateSelects();
+}
+
+// ---- RENDER ----
+function renderAll() { renderDash(); renderEntries(); renderPL(); renderMachines(); populateSelects(); }
+
+function renderDash() {
+  const inc = db.entries.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0);
+  const exp = db.entries.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0);
+  const profit = inc-exp;
+  const margin = inc>0?(profit/inc*100):0;
+  document.getElementById('kpiGrid').innerHTML = `
+    <div class="kpi"><label>הכנסות</label><div class="val g">${fmt(inc)}</div></div>
+    <div class="kpi"><label>הוצאות</label><div class="val r">${fmt(exp)}</div></div>
+    <div class="kpi"><label>רווח נקי</label><div class="val ${profit>=0?'g':'r'}">${fmt(profit)}</div></div>
+    <div class="kpi"><label>מרג'ין</label><div class="val a">${margin.toFixed(1)}%</div></div>
+  `;
+  const recent = db.entries.slice(0,10);
+  document.getElementById('recentList').innerHTML = recent.length
+    ? recent.map(e => entryRow(e)).join('')
+    : '<div class="empty">אין עסקאות עדיין</div>';
+}
+
+function entryRow(e, showDel=false) {
+  return `<div class="entry-row">
+    <span class="badge ${e.type==='income'?'i':'e'}">${e.type==='income'?'הכנסה':'הוצאה'}</span>
+    <div class="entry-meta">
+      <div class="entry-cat">${e.cat}</div>
+      <div class="entry-sub">${e.machine} · ${e.date}${e.desc?' · '+e.desc:''}</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="entry-amount ${e.type==='income'?'g':'r'}">${e.type==='income'?'+':'-'}${fmt(e.amount)}</div>
+      ${showDel?`<button class="btn-sm btn-danger" onclick="deleteEntry(${e.id})">✕</button>`:''}
+    </div>
+  </div>`;
+}
+
+function renderEntries() {
+  populateSelects();
+  const fm = document.getElementById('f-machine')?.value||'';
+  const ft = document.getElementById('f-type')?.value||'';
+  const fs = document.getElementById('f-search')?.value.toLowerCase()||'';
+  const filtered = db.entries.filter(e =>
+    (!fm||e.machine===fm) && (!ft||e.type===ft) &&
+    (!fs||[e.cat,e.machine,e.desc].join(' ').toLowerCase().includes(fs))
+  );
+  document.getElementById('entriesList').innerHTML = filtered.length
+    ? filtered.map(e=>entryRow(e,true)).join('')
+    : '<div class="empty">אין תוצאות</div>';
+}
+
+function renderPL() {
+  populateSelects();
+  const pm = document.getElementById('pl-machine')?.value||'';
+  const pmon = document.getElementById('pl-month')?.value||'';
+  const months = [...new Set(db.entries.map(e=>e.date.slice(0,7)))].sort().reverse();
+  const ms = document.getElementById('pl-month');
+  if(ms) {
+    const cur = ms.value;
+    ms.innerHTML = `<option value="">כל החודשים</option>${months.map(m=>`<option value="${m}">${m}</option>`).join('')}`;
+    if(cur) ms.value=cur;
+  }
+  const entries = db.entries.filter(e=>(!pm||e.machine===pm)&&(!pmon||e.date.startsWith(pmon)));
+  const incByCat={}, expByCat={};
+  INCOME_CATS.forEach(c=>incByCat[c]=0);
+  EXPENSE_CATS.forEach(c=>expByCat[c]=0);
+  entries.forEach(e=>{ if(e.type==='income') incByCat[e.cat]=(incByCat[e.cat]||0)+e.amount; else expByCat[e.cat]=(expByCat[e.cat]||0)+e.amount; });
+  const totalInc = Object.values(incByCat).reduce((s,v)=>s+v,0);
+  const totalExp = Object.values(expByCat).reduce((s,v)=>s+v,0);
+  const profit = totalInc-totalExp;
+  const incRows = Object.entries(incByCat).filter(([,v])=>v>0).map(([k,v])=>`<div class="pl-row indent"><span>${k}</span><span class="pl-val" style="color:var(--green)">${fmt(v)}</span></div>`).join('');
+  const expRows = Object.entries(expByCat).filter(([,v])=>v>0).map(([k,v])=>`<div class="pl-row indent"><span>${k}</span><span class="pl-val" style="color:var(--red)">${fmt(v)}</span></div>`).join('');
+  document.getElementById('plContent').innerHTML = `
+    <div class="pl-row section-header"><span>הכנסות</span></div>
+    ${incRows||'<div class="pl-row indent" style="color:var(--muted)">—</div>'}
+    <div class="pl-row total"><span>סה"כ הכנסות</span><span class="pl-val" style="color:var(--green)">${fmt(totalInc)}</span></div>
+    <div class="pl-row section-header" style="margin-top:4px"><span>הוצאות</span></div>
+    ${expRows||'<div class="pl-row indent" style="color:var(--muted)">—</div>'}
+    <div class="pl-row total"><span>סה"כ הוצאות</span><span class="pl-val" style="color:var(--red)">${fmt(totalExp)}</span></div>
+    <div class="pl-row profit"><span>רווח נקי</span><span class="pl-val" style="color:${profit>=0?'var(--green)':'var(--red)'}">${fmt(profit)}</span></div>
+    <div class="pl-row" style="padding:6px 16px 14px"><span style="font-size:12px;color:var(--muted)">מרג'ין</span><span class="pl-val" style="font-size:12px;color:var(--muted)">${totalInc>0?(profit/totalInc*100).toFixed(1):0}%</span></div>
+  `;
+}
+
+function renderMachines() {
+  const el = document.getElementById('machinesList');
+  if(!db.machines.length) { el.innerHTML='<div class="empty">אין מכונות</div>'; return; }
+  el.innerHTML = db.machines.map(m=>{
+    const inc = db.entries.filter(e=>e.machine===m&&e.type==='income').reduce((s,e)=>s+e.amount,0);
+    const exp = db.entries.filter(e=>e.machine===m&&e.type==='expense').reduce((s,e)=>s+e.amount,0);
+    const p = inc-exp;
+    return `<div class="machine-card">
+      <div><div class="machine-name">${m}</div></div>
+      <div class="machine-stat" style="color:var(--green)">${fmt(inc)}</div>
+      <div class="machine-stat" style="color:var(--red)">${fmt(exp)}</div>
+      <div class="machine-stat" style="color:${p>=0?'var(--green)':'var(--red)'};font-weight:500">${fmt(p)}</div>
+      <button class="btn-sm btn-danger" onclick="deleteMachine('${m}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function exportCSV() {
+  const rows=[['תאריך','מכונה','סוג','קטגוריה','תיאור','סכום']];
+  db.entries.forEach(e=>rows.push([e.date,e.machine,e.type,e.cat,e.desc,e.type==='income'?e.amount:-e.amount]));
+  const csv=rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download='vendingbk_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+// ---- TABS ----
+function showTab(t) {
+  ['dash','add','entries','pl','machines'].forEach(id=>{
+    document.getElementById('sec-'+id).classList.toggle('active',id===t);
+    document.getElementById('nav-'+id).classList.toggle('active',id===t);
+  });
+  if(t==='dash') renderDash();
+  if(t==='entries') renderEntries();
+  if(t==='pl') renderPL();
+  if(t==='machines') renderMachines();
+  if(t==='add') { populateSelects(); updateCats(); }
+}
+
+// ---- INIT ----
+document.getElementById('e-date').value = today();
+populateSelects(); updateCats(); renderAll();
+if(clientId) loadGapi();
+else { setTimeout(()=>openModal(), 800); }
+</script>
+</body>
+</html>
